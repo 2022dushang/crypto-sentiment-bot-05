@@ -17,27 +17,40 @@ BINANCE_SECRET = st.secrets.get("api_secret", "")
 client = Client(key=BINANCE_KEY, secret=BINANCE_SECRET)
 
 def get_data(symbol):
-    """
-    逆向工程核心：通过获取'全球交易者多空账户比例'并进行EMA平滑，
-    模拟社区投票器那种反映中线真实意图的缓慢变化过程。
-    """
-    
+    """获取并处理平滑后的多空人数占比"""
     try:
-        # 注意：这里改成了最新的官方方法名
-        data = client.global_long_short_accounts(symbol=symbol, period=PERIOD, limit=100)
+        # 尝试方案 A (当前版本最通用的方法名)
+        try:
+            data = client.global_long_short_account_ratio(symbol=symbol, period=PERIOD, limit=100)
+        except AttributeError:
+            # 尝试方案 B (备选方法名)
+            data = client.global_long_short_accounts(symbol=symbol, period=PERIOD, limit=100)
         
-        if not data:
-            return 50.0, 50.0, "API返回数据为空"
+        if not data or len(data) == 0:
+            return 50.0, 50.0, "API返回数据为空 (请检查币种符号)"
             
         df = pd.DataFrame(data)
-        df['longAccount'] = df['longAccount'].astype(float)
-        df['smoothed_long'] = df['longAccount'].ewm(span=WINDOW_SIZE, adjust=False).mean() * 100
+        
+        # 币安返回的字段可能是 longAccount 或 longAccountRatio
+        # 我们做一个兼容性处理
+        target_col = 'longAccount' if 'longAccount' in df.columns else 'longAccountRatio'
+        
+        if target_col not in df.columns:
+            return 50.0, 50.0, f"找不到数据列，现有列: {list(df.columns)}"
+
+        df[target_col] = df[target_col].astype(float)
+        
+        # 7天EMA平滑 (核心算法)
+        df['smoothed_long'] = df[target_col].ewm(span=WINDOW_SIZE, adjust=False).mean() * 100
+        
         long_pc = round(df['smoothed_long'].iloc[-1], 2)
         short_pc = round(100 - long_pc, 2)
+        
         return long_pc, short_pc, None
+        
     except Exception as e:
-        # 这里的 e 会告诉你具体的报错，比如 "403 Forbidden" (IP被封) 或 "Invalid API-key"
-        return 50.0, 50.0, str(e)
+        # 返回具体的错误字符串
+        return 50.0, 50.0, f"调试信息: {str(e)}"
 
 def create_sentiment_bar(symbol, long_pc, short_pc):
     """创建符合需求的红绿对抗进度条"""
@@ -130,6 +143,7 @@ while True:
 
 
         time.sleep(10) # 建议频率不宜过快，防止被币安封禁IP
+
 
 
 
