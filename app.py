@@ -12,8 +12,8 @@ WINDOW_SIZE = 42  # 7天平滑窗口 (42 * 4h = 168h = 7 days)
 
 # --- API 密钥集成 ---
 # 建议在 Streamlit Secrets 或 环境变量中设置，为了方便你修改，这里预留位置
-BINANCE_API_KEY = st.secrets.get("api_key", "")
-BINANCE_API_SECRET = st.secrets.get("api_secret", "")
+BINANCE_API_KEY = st.secrets["binance_api_key"]
+BINANCE_API_SECRET = st.secrets["binance_api_secret"]
 
 # 初始化客户端 (即便不传入Key，部分公开数据也能获取，但传入Key更稳定)
 client = Client(key=BINANCE_API_KEY, secret=BINANCE_API_SECRET)
@@ -132,5 +132,6 @@ while True:
                         key=unique_key
                     )
             st.write("") 
+
 
         time.sleep(10) # 建议频率不宜过快，防止被币安封禁IP
