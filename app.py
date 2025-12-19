@@ -23,25 +23,22 @@ def get_data(symbol):
     逆向工程核心：通过获取'全球交易者多空账户比例'并进行EMA平滑，
     模拟社区投票器那种反映中线真实意图的缓慢变化过程。
     """
+    
     try:
-        # 修正方法名：使用官方接口获取多空账户比
+        # 注意：这里改成了最新的官方方法名
         data = client.global_long_short_accounts(symbol=symbol, period=PERIOD, limit=100)
         
         if not data:
-            return 50.0, 50.0, "API 未返回数据"
+            return 50.0, 50.0, "API返回数据为空"
             
         df = pd.DataFrame(data)
-        # 将字符串转为浮点数
         df['longAccount'] = df['longAccount'].astype(float)
-        
-        # 7天EMA平滑：这是模拟“投票器”缓慢变动的关键
-        # 它过滤掉了日内的剧烈波动，保留了中线意图
         df['smoothed_long'] = df['longAccount'].ewm(span=WINDOW_SIZE, adjust=False).mean() * 100
-        
         long_pc = round(df['smoothed_long'].iloc[-1], 2)
         short_pc = round(100 - long_pc, 2)
         return long_pc, short_pc, None
     except Exception as e:
+        # 这里的 e 会告诉你具体的报错，比如 "403 Forbidden" (IP被封) 或 "Invalid API-key"
         return 50.0, 50.0, str(e)
 
 def create_sentiment_bar(symbol, long_pc, short_pc):
@@ -135,3 +132,4 @@ while True:
 
 
         time.sleep(10) # 建议频率不宜过快，防止被币安封禁IP
+
