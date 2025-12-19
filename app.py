@@ -111,7 +111,7 @@ while True:
                 with col_text:
                     st.markdown(f"### {symbol[:3]}")
                     if error:
-                        st.error("接口异常")
+                        st.error(f"异常详情: {error}")        #st.error("接口异常")
                     elif long_v >= 65:
                         st.warning("🔴 极度看多(反向预警)")
                     elif long_v <= 35:
@@ -130,5 +130,6 @@ while True:
 
 
         time.sleep(10) # 建议频率不宜过快，防止被币安封禁IP
+
 
 
